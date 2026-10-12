@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-import shutil
 import tempfile
 import time
 from pathlib import Path

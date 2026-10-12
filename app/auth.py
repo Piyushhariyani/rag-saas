@@ -2,7 +2,6 @@ import os
 import hmac
 from fastapi import HTTPException
 # pyrefly: ignore [missing-import]
-from app import config
 
 def _load_keys() -> dict:
     mapping = {}
