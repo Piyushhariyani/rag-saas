@@ -6,9 +6,7 @@ import time
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langsmith import Client, evaluate
 
-# pyrefly: ignore [missing-import]
 from app import config as settings
-# pyrefly: ignore [missing-import]
 from app.chain import chain
 
 TENANT = "tenant_a"
@@ -26,7 +24,7 @@ def target(inputs: dict) -> dict:
 
 def retrieval_hit(outputs: dict, reference_outputs: dict) -> dict:
     expected = reference_outputs.get("page")
-    if expected is None:          # off-topic question: nothing to retrieve
+    if expected is None:  # off-topic question: nothing to retrieve
         return {"key": "retrieval_hit", "score": 1}
     pages = [int(s["page"]) for s in outputs["sources"] if s["page"] is not None]
     return {"key": "retrieval_hit", "score": 1 if int(expected) in pages else 0}
@@ -85,6 +83,9 @@ if __name__ == "__main__":
         metadata={
             "chain_version": settings.CHAIN_VERSION,
             "top_k": settings.TOP_K,
+            "fetch_k": settings.FETCH_K,
+            "rerank": settings.USE_RERANK,
+            "rerank_model": settings.RERANK_MODEL,
             "chunk_size": settings.CHUNK_SIZE,
             "llm_model": settings.LLM_MODEL,
         },

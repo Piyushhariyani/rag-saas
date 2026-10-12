@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
+import shutil
 import tempfile
 import time
 from pathlib import Path
@@ -10,12 +11,16 @@ from langserve import add_routes
 from langsmith import Client
 from pydantic import BaseModel, Field
 
+# pyrefly: ignore [missing-import]
 from app import config as settings
+# pyrefly: ignore [missing-import]
 from app.auth import tenant_from_key
+# pyrefly: ignore [missing-import]
 from app.chain import chain
+# pyrefly: ignore [missing-import]
 from app.ingest import ingest_file
 
-app = FastAPI(title="RAG SaaS", version="0.2.0")
+app = FastAPI(title="RAG SaaS", version="0.3.0")
 ls_client = Client()
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
@@ -40,6 +45,8 @@ async def per_req_config_modifier(config: dict, request: Request) -> dict:
         "llm_model": settings.LLM_MODEL,
         "embedding_model": settings.EMBEDDING_MODEL,
         "top_k": settings.TOP_K,
+        "rerank": settings.USE_RERANK,
+        "fetch_k": settings.FETCH_K,
     })
     config["tags"] = list(config.get("tags") or []) + [f"tenant:{tenant_id}"]
     return config
@@ -86,7 +93,7 @@ def feedback(body: FeedbackIn, x_api_key: str | None = Header(default=None)):
             run = ls_client.read_run(body.run_id)
             break
         except Exception as e:
-            print("read_run failed:", repr(e))  # visible in the server terminal
+            print("read_run failed:", repr(e))
             time.sleep(2)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -94,8 +101,7 @@ def feedback(body: FeedbackIn, x_api_key: str | None = Header(default=None)):
     # Security: a tenant may only rate its own runs.
     owner = (run.extra or {}).get("metadata", {}).get("tenant_id")
     if owner != tenant_id:
-        print("owner:", owner, "caller:", tenant_id)
-        raise HTTPException(status_code=404, detail="Run not found")  # same error, so run IDs can't be probed
+        raise HTTPException(status_code=404, detail="Run not found")
 
     ls_client.create_feedback(
         run_id=body.run_id,
